@@ -54,8 +54,8 @@ class UpdateVerticle : CoroutineVerticle() {
             githubRelease.commitHash,
             githubRelease.publishDate.toInstant().atOffset(ZoneOffset.UTC),
             it.date,
-            listOf(),
-            listOf(),
+            mutableListOf(),
+            mutableListOf(),
             null
           )
         } else {

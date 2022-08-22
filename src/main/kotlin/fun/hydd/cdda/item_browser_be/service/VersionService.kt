@@ -2,9 +2,8 @@ package `fun`.hydd.cdda.item_browser_be.service
 
 import `fun`.hydd.cdda.item_browser_be.entity.Version
 import `fun`.hydd.cdda.item_browser_be.util.await
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import `fun`.hydd.cdda.item_browser_be.util.toFuture
+import io.vertx.core.CompositeFuture
 import org.hibernate.reactive.stage.Stage
 
 class VersionService(private val emf: Stage.SessionFactory) {
@@ -26,9 +25,9 @@ class VersionService(private val emf: Stage.SessionFactory) {
   }
 
   suspend fun saveVersions(versions: List<Version>) {
-    coroutineScope {
-      versions.map { async { saveVersion(it) } }.awaitAll()
-    }
+    emf.withTransaction { session, _ ->
+      CompositeFuture.all(versions.map { session.persist(it).toFuture() }).toCompletionStage()
+    }.await()
   }
 }
 
