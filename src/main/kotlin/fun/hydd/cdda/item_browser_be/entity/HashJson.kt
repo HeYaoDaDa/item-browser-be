@@ -10,7 +10,7 @@ import javax.validation.constraints.NotNull
 
 @Entity
 class HashJson(
-    @NotNull @NotBlank @Max(64) var hash: String,
-    @NotNull @NotBlank var json: JsonObject,
-    @Id @GeneratedValue var id: Long,
+  @NotNull @NotBlank @Max(64) var hash: String,
+  @NotNull @NotBlank var json: JsonObject,
+  @Id @GeneratedValue var id: Long? = null,
 )

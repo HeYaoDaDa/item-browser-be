@@ -8,7 +8,6 @@
 
         <class>fun.hydd.cdda.item_browser_be.entity.CddaItem</class>
         <class>fun.hydd.cdda.item_browser_be.entity.CddaItemRef</class>
-        <class>fun.hydd.cdda.item_browser_be.entity.CddaJson</class>
         <class>fun.hydd.cdda.item_browser_be.entity.HashJson</class>
         <class>fun.hydd.cdda.item_browser_be.entity.Version</class>
 

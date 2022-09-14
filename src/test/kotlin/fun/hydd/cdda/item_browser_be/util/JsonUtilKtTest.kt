@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test
 
 internal class JsonUtilKtTest {
   private var json1 = JsonObject()
+  private var json2 = JsonObject()
   private var jsonArray1 = JsonArray()
 
   @BeforeEach
@@ -25,6 +26,7 @@ internal class JsonUtilKtTest {
         }, "g" to 8
       )
     }
+    json2 = json { obj("a" to array(1, 2, 3, 4), "b" to array("1", "2"), "c" to array(false, true)) }
     jsonArray1 = JsonArray()
     jsonArray1.add("b")
     jsonArray1.add(1)
@@ -47,5 +49,20 @@ internal class JsonUtilKtTest {
       "[\"b\",1,3,{\"a\":1,\"b\":2,\"c\":{\"a\":1,\"b\":2,\"c\":4,\"d\":5,\"e\":6,\"f\":7,\"g\":8,\"h\":9},\"d\":5,\"e\":6,\"f\":7,\"g\":8,\"h\":[\"b\",\"a\",{\"1\":0,\"3\":3,\"a\":1,\"c\":3},\"z\"]},4]",
       sortJsonArray(jsonArray1).toString()
     )
+  }
+
+  @Test
+  fun getIntListTest() {
+    Assertions.assertEquals(json2.getIntList("a"), listOf(1, 2, 3, 4))
+  }
+
+  @Test
+  fun getStringListTest() {
+    Assertions.assertEquals(json2.getStringList("b"), listOf("1", "2"))
+  }
+
+  @Test
+  fun getBooleanListTest() {
+    Assertions.assertEquals(json2.getBooleanList("c"), listOf(false, true))
   }
 }
