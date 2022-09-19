@@ -9,5 +9,8 @@
         <module name="item-browser-be" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="item-browser-be" target="16" />
+    </bytecodeTargetLevel>
   </component>
 </project>

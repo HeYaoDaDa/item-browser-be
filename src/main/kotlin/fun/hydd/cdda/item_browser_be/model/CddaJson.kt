@@ -7,8 +7,12 @@ import `fun`.hydd.cdda.item_browser_be.constant.JSON_KEY_DELETE
 import `fun`.hydd.cdda.item_browser_be.constant.JSON_KEY_EXTEND
 import `fun`.hydd.cdda.item_browser_be.constant.JSON_KEY_PROPORTIONAL
 import `fun`.hydd.cdda.item_browser_be.constant.JSON_KEY_RELATIVE
-import `fun`.hydd.cdda.item_browser_be.util.getDamageUnit
+import `fun`.hydd.cdda.item_browser_be.util.getBooleanList
+import `fun`.hydd.cdda.item_browser_be.util.getDamageUnitList
+import `fun`.hydd.cdda.item_browser_be.util.getDoubleList
 import `fun`.hydd.cdda.item_browser_be.util.getGettextString
+import `fun`.hydd.cdda.item_browser_be.util.getStringList
+import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import org.slf4j.LoggerFactory
 
@@ -49,62 +53,154 @@ data class CddaJson(
     delete = if (copyFromId != null && json.containsKey(JSON_KEY_DELETE)) json.getJsonObject(JSON_KEY_DELETE) else null
   }
 
-  fun getValue(key: String): Any? {
-    return json.getValue(key)
+  fun getValue(key: String, parentValue: Any?): Any? {
+    return if (json.containsKey(key)) json.getValue(key)
+    else parentValue
   }
 
-  fun getValue(key: String, def: Any): Any {
-    return json.getValue(key, def)
+  fun getValue(key: String, parentValue: Any?, def: Any): Any {
+    return getValue(key, parentValue) ?: def
   }
 
-  fun getString(key: String): Any? {
-    return json.getString(key)
+  fun getString(key: String, parentValue: String?): String? {
+    return if (json.containsKey(key)) json.getString(key)
+    else parentValue
   }
 
-  fun getString(key: String, def: String): String {
-    return json.getString(key, def)
+  fun getString(key: String, parentValue: String?, def: String): String {
+    return getString(key, parentValue) ?: def
   }
 
-  fun getBoolean(key: String): Boolean? {
-    return json.getBoolean(key)
+  fun getBoolean(key: String, parentValue: Boolean?): Boolean? {
+    return if (json.containsKey(key)) json.getBoolean(key)
+    else parentValue
   }
 
-  fun getBoolean(key: String, def: Boolean): Boolean {
-    return json.getBoolean(key, def)
+  fun getBoolean(key: String, parentValue: Boolean?, def: Boolean): Boolean {
+    return getBoolean(key, parentValue) ?: def
   }
 
-  fun getDouble(key: String): Double? {
-    var result = json.getDouble(key)
+  fun getDouble(key: String, parentValue: Double?): Double? {
+    val result = if (json.containsKey(key)) json.getDouble(key) as Double
+    else parentValue
+    return if (result != null) processDoubleProportionalAndRelative(result, key)
+    else null
+  }
+
+  fun getDouble(key: String, parentValue: Double?, def: Double): Double {
+    val result = if (json.containsKey(key)) json.getDouble(key) as Double
+    else parentValue ?: def
+    return processDoubleProportionalAndRelative(result, key)
+  }
+
+  fun getGettextString(key: String, ctxt: String? = null, parentValue: GettextString?): GettextString? {
+    return if (json.containsKey(key)) json.getGettextString(key, ctxt)
+    else parentValue
+  }
+
+  @Suppress("UNCHECKED_CAST")
+  fun <T> getList(key: String, parentValue: List<T>?): List<T>? {
+    val result = if (json.containsKey(key)) json.getJsonArray(key).map { it as T }
+    else parentValue
+    return result
+  }
+
+  fun getStringList(key: String, parentValue: List<String>?, def: List<String>? = null): List<String>? {
+    var result = if (json.containsKey(key)) json.getStringList(key)?.toMutableList()
+    else (parentValue ?: def)?.toMutableList()
+    if (extend != null) {
+      val extendValue = extend.getStringList(key)
+      if (extendValue != null) {
+        if (result != null) result.addAll(extendValue)
+        else result = extendValue.toMutableList()
+      }
+    }
     if (result != null) {
-      result = processDoubleProportinalAndRelative(result, key)
+      if (delete != null) {
+        val deleteValue = delete.getStringList(key)
+        if (deleteValue != null) result.removeAll(deleteValue)
+      }
     }
     return result
   }
 
-  fun getDouble(key: String, def: Double): Double {
-    var result = json.getDouble(key, def)
-    result = processDoubleProportinalAndRelative(result, key)
+  fun getBooleanList(key: String, parentValue: List<Boolean>?, def: List<Boolean>? = null): List<Boolean>? {
+    var result = if (json.containsKey(key)) json.getBooleanList(key)?.toMutableList()
+    else (parentValue ?: def)?.toMutableList()
+    if (extend != null) {
+      val extendValue = extend.getBooleanList(key)
+      if (extendValue != null) {
+        if (result != null) result.addAll(extendValue)
+        else result = extendValue.toMutableList()
+      }
+    }
+    if (result != null) {
+      if (delete != null) {
+        val deleteValue = delete.getBooleanList(key)
+        if (deleteValue != null) result.removeAll(deleteValue)
+      }
+    }
     return result
   }
 
-  fun getGettextString(key: String, ctxt: String? = null): GettextString? {
-    return json.getGettextString(key, ctxt)
-  }
-
-  fun getDamageUnit(key: String): DamageUnit? {
-    var damageUnit = json.getDamageUnit(key)
-    if (damageUnit != null) {
-      damageUnit = processDamageUnitProportional(damageUnit, key)
-      damageUnit = processDamageUnitRelative(damageUnit, key)
+  fun getDoubleList(key: String, parentValue: List<Double>?, def: List<Double>? = null): List<Double>? {
+    var result = if (json.containsKey(key)) json.getDoubleList(key)?.toMutableList()
+    else (parentValue ?: def)?.toMutableList()
+    if (extend != null) {
+      val extendValue = extend.getDoubleList(key)
+      if (extendValue != null) {
+        if (result != null) result.addAll(extendValue)
+        else result = extendValue.toMutableList()
+      }
     }
-    return damageUnit
+    if (result != null) {
+      if (delete != null) {
+        val deleteValue = delete.getDoubleList(key)
+        if (deleteValue != null) result.removeAll(deleteValue)
+      }
+    }
+    return result
   }
 
-  fun <T> getList(key: String): List<T>? {
-    return json.getJsonArray(key)?.mapNotNull { it as T }
+  fun getDamageUnitList(key: String, parentValue: List<DamageUnit>?, def: List<DamageUnit>? = null): List<DamageUnit>? {
+    val result = if (json.containsKey(key)) json.getDamageUnitList(key)?.toMutableList()
+    else (parentValue ?: def)?.toMutableList()
+    if (result != null) {
+      if (relative != null && relative.containsKey(key)) {
+        val relativeValue: Any = relative.getValue(key)
+        val relativeDamageUnitList = mutableListOf<DamageUnit>()
+        when (relativeValue) {
+          is JsonObject -> relativeDamageUnitList.add(DamageUnit(relativeValue))
+          is JsonArray -> relativeDamageUnitList.addAll(relative.getDamageUnitList(key) as List<DamageUnit>)
+          is Int -> result.forEach { it.amount += relativeValue }
+        }
+        if (relativeDamageUnitList.isNotEmpty()) {
+          relativeDamageUnitList.forEach { relativeDamageUnit ->
+            val matchDamageUnit = result.find { it.damageType == relativeDamageUnit.damageType }
+            if (matchDamageUnit != null) processDamageUnitRelative(matchDamageUnit, relativeDamageUnit)
+          }
+        }
+      }
+      if (proportional != null && proportional.containsKey(key)) {
+        val proportionalValue: Any = proportional.getValue(key)
+        val proportionalDamageUnitList = mutableListOf<DamageUnit>()
+        when (proportionalValue) {
+          is JsonObject -> proportionalDamageUnitList.add(DamageUnit(proportionalValue))
+          is JsonArray -> proportionalDamageUnitList.addAll(proportional.getDamageUnitList(key) as List<DamageUnit>)
+          is Int -> result.forEach { it.amount *= proportionalValue }
+        }
+        if (proportionalDamageUnitList.isNotEmpty()) {
+          proportionalDamageUnitList.forEach { proportionalDamageUnit ->
+            val matchDamageUnit = result.find { it.damageType == proportionalDamageUnit.damageType }
+            if (matchDamageUnit != null) processDamageUnitProportional(matchDamageUnit, proportionalDamageUnit)
+          }
+        }
+      }
+    }
+    return result
   }
 
-  private fun processDoubleProportinalAndRelative(value: Double, key: String): Double {
+  private fun processDoubleProportionalAndRelative(value: Double, key: String): Double {
     var result = value
     if (proportional != null) {
       val proportionalValue = proportional.getDouble(key, 1.0)
@@ -121,41 +217,32 @@ data class CddaJson(
     return result
   }
 
-  private fun processDamageUnitRelative(value: DamageUnit, key: String): DamageUnit {
-    if (relative != null) {
-      val relativeValue = relative.getDamageUnit(key)
-      if (relativeValue != null) {
-        value.amount += relativeValue.amount
-        value.armorPen += relativeValue.armorPen
-        value.damageMul += relativeValue.damageMul
-        value.armorMul += relativeValue.armorMul
-        value.unChangeArmorMul += relativeValue.unChangeArmorMul
-        value.unChangeDamageMul += relativeValue.unChangeDamageMul
-      }
+  private fun processDamageUnitRelative(value: DamageUnit, relativeValue: DamageUnit) {
+    if (value.damageType != relativeValue.damageType) {
+      throw IllegalArgumentException("value.damageType ${value.damageType} not is ${relativeValue.damageType}!")
     }
-    return value
+    value.amount += relativeValue.amount
+    value.armorPen += relativeValue.armorPen
+    value.damageMul += relativeValue.damageMul
+    value.armorMul += relativeValue.armorMul
+    value.unChangeArmorMul += relativeValue.unChangeArmorMul
+    value.unChangeDamageMul += relativeValue.unChangeDamageMul
   }
 
-  private fun processDamageUnitProportional(value: DamageUnit, key: String): DamageUnit {
-    if (proportional != null) {
-      val proportionalValue = proportional.getDamageUnit(key)
-      if (proportionalValue != null) {
-        if (value.damageType != proportionalValue.damageType) {
-          throw Throwable("value.damageType ${value.damageType} not is ${proportionalValue.damageType}!")
-        }
-        value.amount = processProportion(value.amount, proportionalValue.amount, "$key.amount")
-        value.armorPen = processProportion(value.armorPen, proportionalValue.armorPen, "$key.armor_penetration")
-        value.armorMul = processProportion(value.armorMul, proportionalValue.armorMul, "$key.armor_multiplier")
-        value.damageMul = processProportion(value.damageMul, proportionalValue.damageMul, "$key.damage_multiplier")
-        value.unChangeArmorMul = processProportion(
-          value.unChangeArmorMul, proportionalValue.unChangeArmorMul, "$key.constant_armor_multiplier"
-        )
-        value.unChangeDamageMul = processProportion(
-          value.unChangeDamageMul, proportionalValue.unChangeDamageMul, "$key.constant_damage_multiplier"
-        )
-      }
+  private fun processDamageUnitProportional(value: DamageUnit, proportionalValue: DamageUnit) {
+    if (value.damageType != proportionalValue.damageType) {
+      throw IllegalArgumentException("value.damageType ${value.damageType} not is ${proportionalValue.damageType}!")
     }
-    return value
+    value.amount = processProportion(value.amount, proportionalValue.amount, "amount")
+    value.armorPen = processProportion(value.armorPen, proportionalValue.armorPen, "armor_penetration")
+    value.armorMul = processProportion(value.armorMul, proportionalValue.armorMul, "armor_multiplier")
+    value.damageMul = processProportion(value.damageMul, proportionalValue.damageMul, "damage_multiplier")
+    value.unChangeArmorMul = processProportion(
+      value.unChangeArmorMul, proportionalValue.unChangeArmorMul, "constant_armor_multiplier"
+    )
+    value.unChangeDamageMul = processProportion(
+      value.unChangeDamageMul, proportionalValue.unChangeDamageMul, "constant_damage_multiplier"
+    )
   }
 
   private fun processProportion(oldValue: Double, newValue: Double, key: String): Double {

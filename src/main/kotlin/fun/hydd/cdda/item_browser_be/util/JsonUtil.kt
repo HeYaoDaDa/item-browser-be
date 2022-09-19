@@ -8,7 +8,7 @@ import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.core.json.get
 import org.slf4j.LoggerFactory
-import kotlin.streams.toList
+import java.lang.instrument.IllegalClassFormatException
 
 val log = LoggerFactory.getLogger("fun.hydd.cdda.item_browser_be.util.JsonUtil")
 
@@ -66,13 +66,10 @@ fun JsonArray.getHashString(): String {
 }
 
 private fun <T> getList(jsonObject: JsonObject, key: String, cla: Class<T>, def: List<T>? = null): List<T>? {
-  val jsonArray = jsonObject.getJsonArray(key) ?: return def
-  return jsonArray.mapNotNull {
-    if (it::class.java == cla) it as T else {
-      log.warn("${it::class.java} not is $cla")
-      null
-    }
-  }
+  return jsonObject.getJsonArray(key)?.mapNotNull {
+    @Suppress("UNCHECKED_CAST") if (it::class.java == cla) it as T
+    else throw IllegalArgumentException("$it class not is $cla")
+  } ?: def
 }
 
 fun JsonObject.getStringList(key: String, def: List<String>? = null): List<String>? {
@@ -80,20 +77,46 @@ fun JsonObject.getStringList(key: String, def: List<String>? = null): List<Strin
 }
 
 fun JsonObject.getIntList(key: String, def: List<Int>? = null): List<Int>? {
-  return getList(this, key, Integer::class.java, def?.map { Integer(it) })?.map { it.toInt() }
+  val jsonArray = this.getJsonArray(key)
+  return jsonArray?.map { if (it is Integer) it.toInt() else throw IllegalClassFormatException("$it not is Integer") }
+    ?: def
+}
+
+fun JsonObject.getDoubleList(key: String, def: List<Double>? = null): List<Double>? {
+  val jsonArray = this.getJsonArray(key)
+  return jsonArray?.map {
+    when (it) {
+      is java.lang.Double -> it.toDouble()
+      is java.lang.Float -> it.toDouble()
+      is Integer -> it.toDouble()
+      else -> throw IllegalClassFormatException("$it not is number")
+    }
+  } ?: def
 }
 
 fun JsonObject.getBooleanList(key: String, def: List<Boolean>? = null): List<Boolean>? {
-  return getList(
-    this,
+  return getList(this,
     key,
     java.lang.Boolean::class.java,
     def?.map { java.lang.Boolean(it) })?.map { it.booleanValue() }
 }
 
-fun JsonObject.getGettextString(key: String, ctxt: String?): GettextString? {
+fun JsonObject.getDamageUnitList(key: String, def: List<DamageUnit>? = null): List<DamageUnit>? {
+  return this.getJsonArray(key)?.mapNotNull {
+    if (it is JsonObject) DamageUnit(it)
+    else throw IllegalArgumentException("$it class not is JsonObject")
+  } ?: def
+}
+
+fun JsonObject.getGettextString(key: String, ctxt: String? = null): GettextString? {
   val value = this.get<Any?>(key)
-  return if (value != null) GettextString(value, ctxt) else null
+  return if (value != null) {
+    when (value) {
+      is String -> GettextString(value, ctxt)
+      is JsonObject -> GettextString(value, ctxt)
+      else -> throw IllegalClassFormatException("json $value's class not is jsonObject or String")
+    }
+  } else null
 }
 
 fun JsonObject.getDamageUnit(key: String): DamageUnit? {
@@ -110,9 +133,11 @@ fun getCddaItemId(cddaJson: CddaJson, idFiled: String = "id"): List<String> {
         is String -> {
           listOf(idValue)
         }
+
         is JsonArray -> {
           idValue.mapNotNull { if (it is String) it else null }
         }
+
         else -> {
           throw Throwable("id filed $idFiled's value $idValue is not string or string list!")
         }

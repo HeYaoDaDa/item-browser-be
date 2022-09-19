@@ -3,7 +3,7 @@ package `fun`.hydd.cdda.item_browser_be.model
 import `fun`.hydd.cdda.item_browser_be.constant.DamageType
 import io.vertx.core.json.JsonObject
 
-class DamageUnit {
+class DamageUnit(input: JsonObject) {
   val damageType: DamageType
   var amount: Double = 0.0
   var armorPen: Double = 0.0
@@ -12,7 +12,7 @@ class DamageUnit {
   var unChangeArmorMul: Double = 1.0
   var unChangeDamageMul: Double = 1.0
 
-  constructor(input: JsonObject) {
+  init {
     if (input.containsKey("damage_type")) {
       damageType = DamageType.valueOf(input.getString("damage_type"))
     } else {
